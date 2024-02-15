@@ -49,7 +49,7 @@ Olivec_Canvas game_render(float dt)
 int main(void) {
     int window = create_window(WIDTH, HEIGHT, "Simple, CPU rendered Game");
 
-    geez_set_render_target(window, width, height);
+    geez_set_render_target(window, WIDTH, HEIGHT);
 
     uint64_t target = 1000/60;
     uint64_t current_time = get_time()/1000000;
@@ -89,14 +89,12 @@ int main(void) {
     close_window(window);
 }
 
-
 #define STB_DS_IMPLEMENTATION
 #define X_NATIVE_WINDOW_IMPLEMENTATION
 #include "x-native-window.c"
 
 #define OLIVEC_IMPLEMENTATION
 #include "olive.c"
-
 
 #define GEEZ_IMPLEMENTATION
 #include "geez.c"

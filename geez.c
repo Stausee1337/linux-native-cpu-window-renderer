@@ -196,7 +196,6 @@ GEEZDEF void geez_set_render_target(int drawable, int width, int height) {
     if (_drawable == -1) {
         _drawable = drawable;
         geez_init();
-        return;
     }
     _drawable = drawable;
     if (!_using_shm) {
