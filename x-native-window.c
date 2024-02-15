@@ -155,7 +155,7 @@ XNWINDEF bool event_loop_poll(int timeout) {
     int pending_events = XPending(_display);
 
     if (pending_events == 0) {
-        if (timeout < -1 || timeout == 0)
+        if (timeout == 0)
             return false;
 
         static struct epoll_event out_epoll_events;
