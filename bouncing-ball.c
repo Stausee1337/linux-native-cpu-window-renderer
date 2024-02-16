@@ -21,9 +21,7 @@ static Vector2 ball_velocity = {200, 200};
 
 Olivec_Canvas oc;
 
-static int width = WIDTH, height = HEIGHT;
-
-Olivec_Canvas game_render(float dt)
+Olivec_Canvas game_render(float dt, int width, int height)
 {
     olivec_fill(oc, BACKGROUND_COLOR);
 
@@ -50,18 +48,19 @@ int main(void) {
     int window = create_window(WIDTH, HEIGHT, "Simple, CPU rendered Game");
 
     geez_set_render_target(window, WIDTH, HEIGHT);
+    int width = WIDTH, height = HEIGHT;
 
     uint64_t target = 1000/60;
-    uint64_t current_time = get_time()/1000000;
-    uint64_t last_redraw =  current_time - 1;
+    uint64_t prev_time = get_time()/1000000;;
 
     bool should_close = false;
     while (!should_close) {
-        uint64_t frametime = last_redraw - current_time;
-        int timeout = (target - frametime);
-        event_loop_poll(timeout);
-        current_time = get_time()/1000000;
-        uint64_t deltatime = current_time - last_redraw;
+        uint64_t current_time = get_time()/1000000;
+
+        uint64_t frametime = current_time - prev_time;
+        prev_time = current_time;
+        int timeout = target - frametime;
+        event_loop_poll(timeout <= 0 ? 0 : timeout);
 
         for (Event e = begin_event(); next_event(&e);)
             switch ((int)e.type) {
@@ -80,10 +79,9 @@ int main(void) {
             }
         
         oc = geez_get_canvas();
-        game_render((float)deltatime/1000);
+        game_render((float)frametime/1000, width, height);
         geez_blit();
 
-        last_redraw = get_time()/1000000;
     }
 
     close_window(window);
