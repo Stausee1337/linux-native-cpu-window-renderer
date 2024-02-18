@@ -85,6 +85,7 @@ XNWINDEF void close_window(int);
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xlib-xcb.h>
+#include <xcb/xcb.h>
 #include <xcb/xproto.h>
 #include <sys/epoll.h>
 
@@ -308,14 +309,73 @@ XNWINDEF int create_window(int width, int height, const char *title) {
     }
 
     Window root = DefaultRootWindow(_display);
-    Window window = XCreateSimpleWindow(
-            _display, 
+
+    xcb_screen_iterator_t iter = xcb_setup_roots_iterator(xcb_get_setup(_connection));
+    xcb_visualid_t visual = CopyFromParent;
+    for (; iter.rem; xcb_screen_next(&iter)) {
+        xcb_depth_iterator_t riter = xcb_screen_allowed_depths_iterator(iter.data);
+        for (; riter.rem; xcb_depth_next(&riter)) {
+            if (riter.data->depth != 32)
+                continue;
+
+            xcb_visualtype_iterator_t viter = xcb_depth_visuals_iterator(riter.data);
+            for (; viter.rem; xcb_visualtype_next(&viter)) {
+                if (viter.data->_class == XCB_VISUAL_CLASS_TRUE_COLOR) {
+                    visual = viter.data->visual_id;
+                    break;
+                }
+            }
+
+            if (visual != CopyFromParent)
+                break;
+        }
+        if (visual != CopyFromParent)
+            break;
+    }
+
+    uint8_t depth = CopyFromParent;
+    if (visual != CopyFromParent) {
+        depth = 32;
+    } else {
+        fprintf(stderr, "Warning: Transparency could not be enabled\n");
+    }
+
+    xcb_colormap_t colormap = 0;
+    uint32_t cw_value_mask = XCB_CW_EVENT_MASK | XCB_CW_BORDER_PIXEL;
+    if (visual != CopyFromParent) {
+        colormap = xcb_generate_id(_connection);
+        xcb_create_colormap(
+                _connection,
+                XCB_COLORMAP_ALLOC_NONE,
+                colormap,
+                root,
+                visual);
+        cw_value_mask |= XCB_CW_COLORMAP;
+    }
+    
+    xcb_create_window_value_list_t window_attributes = {
+        .event_mask = PropertyChangeMask |
+            StructureNotifyMask | VisibilityChangeMask |
+            KeyPressMask | KeyReleaseMask |
+            ButtonPressMask | ButtonReleaseMask |
+            PointerMotionMask,
+        .colormap = colormap,
+        .border_pixel = 0
+    };
+
+    Window window = xcb_generate_id(_connection);
+    xcb_create_window_aux(
+            _connection,
+            depth,
+            window,
             root,
             0, 0,
-            width,
-            height,
-            0, 0, 
-            0);
+            width, height,
+            0,
+            XCB_WINDOW_CLASS_INPUT_OUTPUT,
+            /*visual=*/visual,
+            cw_value_mask,
+            &window_attributes);
 
     if (_root_window == -1) {
         _root_window = window;
@@ -323,12 +383,12 @@ XNWINDEF int create_window(int width, int height, const char *title) {
 
     XStoreName(_display, window, title);
 
-    XSelectInput(_display, window, 
+    /*XSelectInput(_display, window, 
             PropertyChangeMask |
             StructureNotifyMask | VisibilityChangeMask |
             KeyPressMask | KeyReleaseMask |
             ButtonPressMask | ButtonReleaseMask |
-            PointerMotionMask);
+            PointerMotionMask);*/
 
 
     int out_x, out_y, out_width, out_height;
